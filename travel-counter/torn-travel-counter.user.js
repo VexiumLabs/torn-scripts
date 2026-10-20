@@ -2,6 +2,8 @@
 // @name         Torn Travel Counter
 // @namespace    https://github.com/vexiumlabs/torn-scripts
 // @author       DarrylPhilbin
+// @license      GPL-3.0-only
+// @copyright    2026 DarrylPhilbin
 // @version      1.2.0
 // @description  Display the API key owner's lifetime visits to all eleven Torn travel destinations.
 // @match        https://www.torn.com/travelagency.php*
@@ -17,6 +19,21 @@
 // @run-at       document-end
 // @noframes
 // ==/UserScript==
+// Copyright (C) 2026 DarrylPhilbin
+// SPDX-License-Identifier: GPL-3.0-only
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, version 3 of the License.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 
 (() => {
   'use strict';

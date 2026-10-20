@@ -16,4 +16,8 @@ Display the API key owner's lifetime visits to all eleven Torn travel destinatio
 See [the detailed guide](GUIDE.md) for configuration, storage, limitations, and historical development notes.
 
 
+## License
+
+Copyright (C) 2026 DarrylPhilbin. Licensed under [GNU GPL version 3](../LICENSE) (GPL-3.0-only).
+
 [Back to all scripts](../README.md)

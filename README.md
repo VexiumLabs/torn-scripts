@@ -19,4 +19,6 @@ Enter API keys through the script settings. Settings stay on your browser/device
 
 ## License
 
-No license has been selected.
+Copyright (C) 2026 DarrylPhilbin.
+
+The published scripts and documentation are licensed under the [GNU General Public License, version 3](LICENSE) (GPL-3.0-only). Distributed modified versions must comply with GPLv3, including its source-code and license-notice requirements. The software is provided without warranty.

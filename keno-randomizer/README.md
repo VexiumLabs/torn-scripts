@@ -16,4 +16,8 @@ Randomly select one to ten numbers on Torn's Keno board.
 No API key, external libraries, or network requests are required. The source retains its reference credit for the board selectors.
 
 
+## License
+
+Copyright (C) 2026 DarrylPhilbin. Licensed under [GNU GPL version 3](../LICENSE) (GPL-3.0-only).
+
 [Back to all scripts](../README.md)
