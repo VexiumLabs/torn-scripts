@@ -1,0 +1,12 @@
+# Local-only files
+/private/
+
+# Dependencies and local configuration
+node_modules/
+.env
+.env.*
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+*.log
