@@ -9,6 +9,7 @@ Torn browser userscripts by **DarrylPhilbin**, prepared for the `vexiumlabs/torn
 | [Keno Randomizer](keno-randomizer/README.md) | Randomly select one to ten numbers on Torn's Keno board. | None |
 | [Passive Income](passive-income/README.md) | Estimate recurring daily income, compare stock benefit purchases, and budget training costs. | Full Access |
 | [Travel Counter](travel-counter/README.md) | Display the API key owner's lifetime visits to all eleven Torn travel destinations. | Limited access |
+| [Calendar Local Time](calendar-local-time/README.md) | Add local start and end times beneath Torn's calendar event times. | None |
 
 ## Installation
 
