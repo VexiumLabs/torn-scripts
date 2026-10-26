@@ -4,7 +4,7 @@
 // @author       DarrylPhilbin
 // @license      GPL-3.0-only
 // @copyright    2026 DarrylPhilbin
-// @version      1.0.3
+// @version      1.1.0
 // @description  Desktop alerts when your faction chain has one minute and 30 seconds remaining.
 // @match        https://www.torn.com/*
 // @match        https://torn.com/*
@@ -54,8 +54,17 @@
     }
     return { state, alert };
   }
+  function track(previous, sample, now) {
+    if (!sample) return previous;
+    if (sample.count < 10 || sample.seconds === 0) return null;
+    const reset = !previous || sample.count !== previous.count || sample.seconds > previous.rawSeconds + 5;
+    if (reset) return { count: sample.count, rawSeconds: sample.seconds, deadline: now + sample.seconds * 1000, observed: now };
+    if (sample.seconds === previous.rawSeconds) return previous;
+    // A throttled display can count down slowly. Never extend this hit's deadline.
+    return { ...previous, rawSeconds: sample.seconds, deadline: Math.min(previous.deadline, now + sample.seconds * 1000), observed: now };
+  }
   if (typeof module === 'object' && module.exports) {
-    module.exports = { secondsFrom, parseChain, advance };
+    module.exports = { secondsFrom, parseChain, advance, track };
     return;
   }
   if (!document.body || document.getElementById(ID)) return;
@@ -107,7 +116,19 @@
   const test = panel.querySelector('[data-test]');
   document.body.appendChild(controls);
   let enabled = false, starting = false, leaving = false, state = null, release = null;
-  let signature = '', lastChange = 0, notification = null, notificationKind = null;
+  let timing = null, scheduledDeadline = null, alarms = [], notification = null, notificationKind = null;
+  function cancelAlarms() { alarms.forEach(clearTimeout); alarms = []; scheduledDeadline = null; }
+  function scheduleAlarms(now) {
+    if (scheduledDeadline === timing?.deadline) return;
+    cancelAlarms();
+    if (!timing) return;
+    scheduledDeadline = timing.deadline;
+    // Independent one-shot timers avoid relying only on a chained background interval.
+    for (const threshold of [60, 30]) {
+      const delay = timing.deadline - threshold * 1000 - now;
+      if (delay > 0) alarms.push(setTimeout(tick, delay));
+    }
+  }
   const savedKey = ID + '-enabled';
   function savedEnabled() { try { return localStorage.getItem(savedKey) === 'true'; } catch { return false; } }
   function saveEnabled(value) { try { localStorage.setItem(savedKey, String(value)); } catch { tell('Browser storage unavailable; this preference cannot survive reloads.'); } }
@@ -144,6 +165,8 @@
   function stop(message = 'Alerts off') {
     enabled = false;
     state = null;
+    timing = null;
+    cancelAlarms();
     clearNotification();
     if (release) { release(); release = null; }
     enable.textContent = 'Enable alerts';
@@ -158,15 +181,15 @@
       return;
     }
     if (Notification.permission !== 'granted') { stop('Notification permission was removed.'); return; }
-    const sample = readChain();
+    const raw = readChain();
+    const now = Date.now();
+    const previousTiming = timing;
+    timing = track(timing, raw, now);
+    if (timing && previousTiming && (timing.count !== previousTiming.count || timing.deadline > previousTiming.deadline + 5000)) state = null;
+    scheduleAlarms(now);
+    const estimated = timing && (!raw || now - timing.observed > 3000);
+    const sample = timing ? { count: timing.count, seconds: Math.max(0, Math.ceil((timing.deadline - now) / 1000)) } : raw;
     if (!sample) { tell('Waiting for Torn\'s chain timer. Keep this tab open.'); return; }
-    const currentSignature = sample.count + ':' + sample.seconds;
-    const now = performance.now();
-    if (currentSignature !== signature) { signature = currentSignature; lastChange = now; }
-    if (now - lastChange > 10000 && sample.seconds > 0 && sample.count >= 10) {
-      tell('Torn\'s timer is not updating. Check the page; alerts may be delayed.');
-      return;
-    }
     const result = advance(state, sample);
     const newHit = state && result.state && state.count !== result.state.count;
     // Timer updates may retire a chain warning, but must not dismiss a test alert.
@@ -174,8 +197,9 @@
     state = result.state;
     panel.dataset.urgent = String(sample.count >= 10 && sample.seconds > 0 && sample.seconds <= 60);
     tell(sample.count < 10 ? 'Watching; waiting for a chain of 10+ hits.' : sample.seconds === 0 ? 'Chain timer expired; waiting for a new chain.' : `Watching ${sample.count.toLocaleString()} hits - ${Math.floor(sample.seconds / 60)}:${String(sample.seconds % 60).padStart(2, '0')} left`);
+    if (estimated) tell(sample.seconds > 0 ? `Estimated ${sample.seconds}s left; Torn's timer is not updating. Check for new hits.` : 'Last known deadline passed; refresh Torn to check the chain.');
     if (result.alert) {
-      try { desktop(result.alert === 30 ? 'Torn chain: 30-second warning' : 'Torn chain: 1-minute warning', `${sample.count.toLocaleString()} hits. Torn shows ${sample.seconds} seconds remaining. Your chain needs a hit!`); }
+      try { desktop(result.alert === 30 ? 'Torn chain: 30-second warning' : 'Torn chain: 1-minute warning', `${sample.count.toLocaleString()} hits. ${estimated ? 'Estimated' : 'About'} ${sample.seconds} seconds remaining.${estimated ? ' Based on the last reading; check Torn for new hits.' : ' Your chain needs a hit!'}`); }
       catch (error) { stop(error.message); }
     }
   }
@@ -188,7 +212,7 @@
       // Hold one lock for the watch session. Other tabs can still use Torn normally.
       void navigator.locks.request('torn-chain-watcher-v1', { ifAvailable: true }, async lock => {
         if (!lock) { tell('Already watching in another Torn tab. Disable it there first.'); return; }
-        enabled = true; state = null; signature = ''; lastChange = performance.now();
+        enabled = true; state = null; timing = null; cancelAlarms();
         enable.textContent = 'Disable alerts';
         const done = new Promise(resolve => { release = resolve; });
         tick();
@@ -206,6 +230,8 @@
     catch (error) { tell(error.message); }
   };
   setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', tick);
+  window.addEventListener('focus', tick);
   window.addEventListener('storage', event => { if (event.key === savedKey && !savedEnabled()) stop(); });
   window.addEventListener('pagehide', () => { leaving = true; stop(); });
   window.addEventListener('pageshow', () => { leaving = false; tick(); });
