@@ -1,0 +1,52 @@
+# Halloween Helper guide
+
+## Treat receipts
+
+The helper uses Torn's documented v2 log API and discovers the Halloween basket category from Torn's log-category list. Each recognized receipt is saved under its unique log ID. This prevents overlap between paginated or repeated requests from increasing the total twice.
+
+The displayed total is earned treats for the current UTC calendar year, not your spendable basket balance or lifetime basket progress. Purchases and exchanges do not reduce it. Recognized incoming treat logs are included; new or unrecognized log formats are flagged rather than guessed. The most recent 20 receipts are shown, with all recognized receipts retained for the current year.
+
+Sync runs while Torn is focused, approximately once a minute. Overdue syncs are also checked immediately on page load and when you return to Torn, so moving quickly between profiles does not postpone updates. **Sync receipts** also runs it manually. Up to five pages of 100 logs are fetched in a batch, and larger imports resume from their saved position. The total is marked partial until the first import finishes. API delays mean a receipt may not appear immediately after an attack.
+
+On January 1 at 00:00 UTC, the next update starts a fresh ledger. The previous year's receipts are not included. This resets only the helper's statistics; it does not change your actual Torn basket. Targets, the upgrade pin, and the pumpkin position survive.
+
+## Upgrade pinning
+
+Open your basket normally. The helper adds a small pin beside each recognized upgrade. The selected pin is highlighted; clicking it again unpins that upgrade. Pins follow the upgrade icons while scrolling without changing the basket layout. Its buttons never trigger Torn's upgrade or exchange buttons. Costs are based on the documented upgrade list and may need updating if Torn changes them.
+
+Your current spendable balance is read from the basket you are actively viewing. The helper keeps this separate from the basket's Treats Collected progress. Later API receipts add to this recorded balance and recognized upgrade costs subtract from it. Exchanges or unknown balance-changing log formats invalidate the estimate and ask you to reopen your basket. A stale estimate shows “sync needed”; opening the basket is only required when no usable balance remains, such as after an exchange or an unknown balance change.
+
+The alert means **enough treats and the tier is unlocked**. It does not certify that an upgrade is unowned or that special conditions—particularly for Summon Him—are satisfied. Confirm these in Torn before purchasing. A pin alerts once until you unpin or select it again. The helper does not buy the upgrade.
+
+## Target list
+
+The profile pumpkin adds or removes the player from your Halloween list. It appears in the profile Actions grid beside the native target control and matches its dimensions. A highlighted pumpkin with a checkmark means the player is saved; clicking it again removes them. The button is disabled while a save is pending to prevent repeated clicks. Your normal Torn target list is not modified.
+
+**Next target** opens one saved profile per click, in list order, and wraps back to the beginning after the last target. Your position is saved across page changes. The panel also stays open in the current tab when you use Next target, so you can keep cycling. Closing it with the pumpkin, ×, Escape, or an outside click keeps it closed on the next page. Cycling uses no API calls and does not wait for receipt syncing.
+
+All saved targets are included, regardless of status or faction. Check the profile yourself to decide whether you can attack. The helper only opens the profile; you open the attack page and perform the attack yourself.
+
+Adding a target reads their name from the open profile's page title and their ID from its URL. Adding, removing, and cycling targets use no API calls. If the profile name has not loaded, wait for the page to finish loading and try again. Receipt syncing continues to use the API separately.
+
+## Storage and requests
+
+Tampermonkey stores the API key, account identity, current-year receipts, target names and IDs, cursor, pin, recorded basket balance, and pumpkin position locally. No third-party server receives them. No key is embedded in the script, query string, or console output. **Forget key** removes the stored credential while preserving your local lists and receipts.
+
+The open/closed panel state uses the current tab's session storage. Target operations use local data, but initial account setup and receipt syncing require your API key.
+
+Requests are spaced at least 1.8 seconds apart, with a longer pause after API errors. Other tools still share Torn's account/API limits. Web Locks serialize writes and requests among tabs on the same origin. Use `www.torn.com` consistently; mixing it with `torn.com` does not share those locks. The helper supports one connected account per installation.
+
+Page reading occurs only while the document is visible and focused. The helper does not run gameplay actions, poll hidden profile pages, or touch Exchange. Notifications are delivered through Tampermonkey and depend on browser/OS notification settings.
+
+## Troubleshooting
+
+- **Sync needed:** keep Torn visible and focused so an overdue sync can run, or press **Sync receipts**. A saved estimate older than two minutes is not used for upgrade alerts.
+- **Open your basket to refresh:** open the basket to establish a spendable balance again. Exchanges and unrecognized balance changes invalidate the previous estimate.
+- **Profile name has not loaded:** wait for the profile to finish loading, then click its pumpkin again. The helper does not make an API request as a fallback.
+- **Partial history:** use **Sync receipts** again to continue importing. Upgrade alerts wait until the pending import completes.
+
+## Verification
+
+Automated tests cover yearly reset, duplicate receipts, unknown logs, target rotation, balance adjustments, stale upgrade data, and pagination URL validation. A local browser fixture verifies delayed Actions-grid loading, saving names and IDs without API calls, target cycling across page loads, panel persistence, and refreshing overdue upgrade estimates. These tests use mock data; they do not connect to a live Torn account.
+
+References: [Torn API schema](https://www.torn.com/swagger.php), [Trick or Treat](https://wiki.torn.com/wiki/Trick_or_Treat), [Torn scripting rules](https://www.torn.com/rules.php).

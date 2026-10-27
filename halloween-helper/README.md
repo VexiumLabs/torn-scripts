@@ -1,0 +1,27 @@
+# Torn Halloween Helper
+
+One Halloween userscript for treat receipts, upgrade goals, and your own target rotation.
+
+**Author:** DarrylPhilbin · **Version:** 1.0.8 · **License:** GPL-3.0-only
+
+## Features
+
+- **Yearly receipts:** automatically sync Halloween basket logs about once a minute while Torn is visible and focused. Keep individual receipts and total earned treats without subtracting purchases or exchanges. Receipts are deduplicated across syncs.
+- **January reset:** the event ledger starts fresh on January 1 at 00:00 Torn time (UTC). Saved targets, your pin, and pumpkin position remain.
+- **Pinned upgrade:** open your basket and use the small pin beside an upgrade. The sidebar and pumpkin show your selected upgrade and how many treats remain. An alert tells you when the recorded balance covers its cost and its tier is unlocked.
+- **Halloween targets:** use the pumpkin in a player's Actions grid to add or remove them from a separate list. A checkmark shows saved players. Choose **Next target** to cycle through every saved profile in order. Adding, removing, and cycling targets use no API calls; player availability is not checked.
+- **Movable controls:** drag the floating pumpkin wherever you prefer. Its position is saved across pages, and the panel stays open in the current tab while cycling targets.
+
+## Installation
+
+1. Copy [the userscript](torn-halloween-helper.user.js) into Tampermonkey, save, and reload Torn. Desktop Chrome with Tampermonkey is the initial target.
+2. Open the pumpkin's **Settings** and enter your own **Full Access Torn API key**. Historical logs require Full Access. The key stays in Tampermonkey storage and is sent only to `api.torn.com`.
+3. Select **Sync receipts**. Large histories are imported in batches; keep selecting it while the helper reports partial history.
+4. Open your Halloween basket. Use a helper **Pin** button to choose an upgrade; this does not purchase it or exchange treats.
+5. Visit player profiles and use the profile pumpkin to build your Halloween target list.
+
+The script never attacks, purchases upgrades, exchanges treats, or automatically refreshes Torn pages. Target navigation happens only when you press **Next target**.
+
+See the [guide](GUIDE.md) for target cycling, upgrade estimates, storage, and troubleshooting. Automated logic tests and a local browser fixture cover the main behaviors; Torn markup and API log formats may change.
+
+[Back to all scripts](../README.md)
