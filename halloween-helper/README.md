@@ -2,7 +2,7 @@
 
 One Halloween userscript for treat receipts, upgrade goals, and your own target rotation.
 
-**Author:** DarrylPhilbin · **Version:** 1.0.8 · **License:** GPL-3.0-only
+**Author:** DarrylPhilbin · **Version:** 1.1.0 · **License:** GPL-3.0-only
 
 ## Features
 
@@ -14,8 +14,8 @@ One Halloween userscript for treat receipts, upgrade goals, and your own target 
 
 ## Installation
 
-1. Copy [the userscript](torn-halloween-helper.user.js) into Tampermonkey, save, and reload Torn. Desktop Chrome with Tampermonkey is the initial target.
-2. Open the pumpkin's **Settings** and enter your own **Full Access Torn API key**. Historical logs require Full Access. The key stays in Tampermonkey storage and is sent only to `api.torn.com`.
+1. Install [the userscript](torn-halloween-helper.user.js) in Tampermonkey or Torn PDA. In PDA, add it under **Settings → Userscripts**, choose **END** injection, enable it, and reload Torn. Both platforms use this same file.
+2. Open the pumpkin's **Settings** and enter your own **Full Access Torn API key**. Historical logs require Full Access. The key stays on your device and is sent only to `api.torn.com`.
 3. Select **Sync receipts**. Large histories are imported in batches; keep selecting it while the helper reports partial history.
 4. Open your Halloween basket. Use a helper **Pin** button to choose an upgrade; this does not purchase it or exchange treats.
 5. Visit player profiles and use the profile pumpkin to build your Halloween target list.
@@ -23,5 +23,7 @@ One Halloween userscript for treat receipts, upgrade goals, and your own target 
 The script never attacks, purchases upgrades, exchanges treats, or automatically refreshes Torn pages. Target navigation happens only when you press **Next target**.
 
 See the [guide](GUIDE.md) for target cycling, upgrade estimates, storage, and troubleshooting. Automated logic tests and a local browser fixture cover the main behaviors; Torn markup and API log formats may change.
+
+PDA uses an in-panel upgrade alert while the app is open; it does not send background phone notifications. Use one helper tab on older WebViews without Web Locks. PDA compatibility is tested with a mobile browser simulation of its APIs, not yet on a physical device.
 
 [Back to all scripts](../README.md)

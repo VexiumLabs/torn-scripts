@@ -34,9 +34,19 @@ Tampermonkey stores the API key, account identity, current-year receipts, target
 
 The open/closed panel state uses the current tab's session storage. Target operations use local data, but initial account setup and receipt syncing require your API key.
 
-Requests are spaced at least 1.8 seconds apart, with a longer pause after API errors. Other tools still share Torn's account/API limits. Web Locks serialize writes and requests among tabs on the same origin. Use `www.torn.com` consistently; mixing it with `torn.com` does not share those locks. The helper supports one connected account per installation.
+### Torn PDA
 
-Page reading occurs only while the document is visible and focused. The helper does not run gameplay actions, poll hidden profile pages, or touch Exchange. Notifications are delivered through Tampermonkey and depend on browser/OS notification settings.
+Install the same `.user.js` file in PDA with **END** injection. Enter a Full Access key in the helper's Settings; it does not automatically use PDA's configured key, which may lack log access. Desktop and phone settings and lists are separate.
+
+On current PDA versions, the helper uses `PDA_storage` for durable script storage and `PDA_httpGet` for API requests. On older versions without native storage it uses a script-prefixed browser store; clearing browser data can erase that fallback store. Storage write failures are reported instead of silently treating a target as saved.
+
+Web Locks are used where available. Without them, operations are serialized within the current tab only: use one Halloween Helper tab to avoid conflicting writes from multiple tabs. PDA syncing requires a visible page but does not depend on desktop-style window focus.
+
+Upgrade alerts open the helper panel instead of invoking PDA's blocking confirmation dialog. No background phone notifications are scheduled. Keep PDA open to receive updates. Dragging the pumpkin uses touch pointer events, and the panel fits the screen width.
+
+Requests are spaced at least 1.8 seconds apart, with a longer pause after API errors. Other tools still share Torn's account/API limits. Where supported, Web Locks serialize writes and requests among tabs on the same origin. Use `www.torn.com` consistently; mixing it with `torn.com` does not share those locks. The helper supports one connected account per installation.
+
+Page reading occurs only while the document is visible (and focused on desktop). The helper does not run gameplay actions, poll hidden profile pages, or touch Exchange. Desktop notifications are delivered through Tampermonkey and depend on browser/OS notification settings; PDA alerts appear inside the helper.
 
 ## Troubleshooting
 
@@ -50,3 +60,5 @@ Page reading occurs only while the document is visible and focused. The helper d
 Automated tests cover yearly reset, duplicate receipts, unknown logs, target rotation, balance adjustments, stale upgrade data, and pagination URL validation. A local browser fixture verifies delayed Actions-grid loading, saving names and IDs without API calls, target cycling across page loads, panel persistence, and refreshing overdue upgrade estimates. These tests use mock data; they do not connect to a live Torn account.
 
 References: [Torn API schema](https://www.torn.com/swagger.php), [Trick or Treat](https://wiki.torn.com/wiki/Trick_or_Treat), [Torn scripting rules](https://www.torn.com/rules.php).
+
+PDA compatibility follows its [userscript documentation](https://github.com/Manuito83/torn-pda/blob/master/userscripts/README.md). Mobile browser tests simulate PDA storage, HTTP requests, missing Web Locks, and notification behavior. Physical Android/iOS testing remains outstanding.

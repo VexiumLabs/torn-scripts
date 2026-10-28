@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Halloween Helper
 // @namespace    https://github.com/vexiumlabs/torn-scripts
-// @version      1.0.8
+// @version      1.1.0
 // @description  Yearly treat receipts, pinned basket upgrades, and a movable Halloween target list.
 // @author       DarrylPhilbin
 // @license      GPL-3.0-only
@@ -20,7 +20,7 @@
 // Copyright (C) 2026 DarrylPhilbin. SPDX-License-Identifier: GPL-3.0-only
 // Distributed under GNU GPL version 3, WITHOUT ANY WARRANTY. See ../LICENSE.
 
-(() => {
+(async () => {
   'use strict';
   const ID = 'torn-halloween-helper';
   const UPGRADES = [
@@ -120,19 +120,59 @@
     return;
   }
   if (!document.body || document.getElementById(ID)) return;
-  const active = () => document.visibilityState === 'visible' && document.hasFocus();
+  const isPDA = typeof PDA_httpGet === 'function';
+  const nativeStorage = isPDA && typeof PDA_storage !== 'undefined' ? PDA_storage : null;
+  let cache = nativeStorage ? await nativeStorage.loadAll() : null;
+  function getValue(key, fallback) {
+    if (nativeStorage) return cache[key] ?? fallback;
+    if (!isPDA) return GM_getValue(key, fallback);
+    const raw = localStorage.getItem(ID + ':' + key);
+    return raw === null ? fallback : JSON.parse(raw);
+  }
+  async function setValue(key, value) {
+    if (nativeStorage) { await nativeStorage.set(key, value); cache[key] = value; }
+    else if (isPDA) localStorage.setItem(ID + ':' + key, JSON.stringify(value));
+    else GM_setValue(key, value);
+  }
+  async function deleteValue(key) {
+    if (nativeStorage) { await nativeStorage.delete(key); delete cache[key]; }
+    else if (isPDA) localStorage.removeItem(ID + ':' + key);
+    else GM_deleteValue(key);
+  }
+  const active = () => document.visibilityState === 'visible' && (isPDA || document.hasFocus());
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-  let account = GM_getValue('hh-account', null), busy = false, scanning = false, lastScan = 0;
+  let account = getValue('hh-account', null), busy = false, scanning = false, lastScan = 0;
   const accountKey = () => 'hh-data-' + account.id;
-  function load() { return account ? freshYear(GM_getValue(accountKey(), { targets: [], receipts: {}, unknown: {}, cursor: 0 }), Date.now()) : null; }
+  function load() { return account ? freshYear(getValue(accountKey(), { targets: [], receipts: {}, unknown: {}, cursor: 0 }), Date.now()) : null; }
+  const localLocks = new Map();
   async function locked(name, fn) {
-    if (!navigator.locks) throw new Error('This browser needs Web Locks support for safe multi-tab updates.');
-    return navigator.locks.request('hh-' + name, fn);
+    const run = async () => {
+      if (nativeStorage) cache = await nativeStorage.loadAll();
+      return fn();
+    };
+    if (navigator.locks) return navigator.locks.request('hh-' + name, run);
+    // Older PDA WebViews: serialize this tab's operations. Use one helper tab.
+    const previous = localLocks.get(name) || Promise.resolve();
+    const next = previous.catch(() => {}).then(run);
+    localLocks.set(name, next);
+    try { return await next; } finally { if (localLocks.get(name) === next) localLocks.delete(name); }
   }
   async function update(fn) {
     if (!account) throw new Error('Save your Torn API key first.');
-    return locked('data-' + account.id, () => {
-      const data = fn(load()); GM_setValue(accountKey(), data); return data;
+    return locked('data-' + account.id, async () => {
+      const data = fn(load()); await setValue(accountKey(), data); return data;
+    });
+  }
+  function sendRequest(options) {
+    if (!isPDA) return GM_xmlhttpRequest(options);
+    let finished = false;
+    const timer = setTimeout(() => { finished = true; options.ontimeout(); }, options.timeout);
+    Promise.resolve().then(() => PDA_httpGet(options.url, options.headers)).then(response => {
+      if (finished) return;
+      finished = true; clearTimeout(timer); return options.onload(response);
+    }).catch(() => {
+      if (finished) return;
+      finished = true; clearTimeout(timer); options.onerror();
     });
   }
   function request(url, key) {
@@ -140,17 +180,17 @@
     const parsed = new URL(url);
     if (parsed.origin !== 'https://api.torn.com' || !parsed.pathname.startsWith('/v2/')) throw new Error('Invalid API destination.');
     return locked('api', async () => {
-      const wait = Number(GM_getValue('hh-next-request', 0)) - Date.now();
+      const wait = Number(getValue('hh-next-request', 0)) - Date.now();
       if (wait > 0) await delay(Math.min(wait, 60000));
-      GM_setValue('hh-next-request', Date.now() + 1800);
-      return new Promise((resolve, reject) => GM_xmlhttpRequest({
+      await setValue('hh-next-request', Date.now() + 1800);
+      return new Promise((resolve, reject) => sendRequest({
         method: 'GET', url: parsed.href, headers: { Authorization: 'ApiKey ' + key }, anonymous: true, timeout: 20000,
-        onload(response) {
+        async onload(response) {
           try {
             if (response.status !== 200) throw new Error('Torn API HTTP ' + response.status + '. Try again later.');
             const json = JSON.parse(response.responseText);
             if (json.error) {
-              GM_setValue('hh-next-request', Date.now() + 30000);
+              await setValue('hh-next-request', Date.now() + 30000);
               throw new Error('Torn API error ' + json.error.code + '. Check key access or try again later.');
             }
             resolve(json);
@@ -159,11 +199,11 @@
       }));
     });
   }
-  const api = path => request('https://api.torn.com/v2/' + path, GM_getValue('hh-key', ''));
+  const api = path => request('https://api.torn.com/v2/' + path, getValue('hh-key', ''));
   const el = (tag, text, props = {}) => Object.assign(document.createElement(tag), { textContent: text, ...props });
   const button = (label, action) => { const b = el('button', label, { type: 'button' }); b.onclick = () => Promise.resolve().then(action).catch(showError); return b; };
   const root = el('section', '', { id: ID });
-  root.innerHTML = '<button type="button" data-pumpkin aria-label="Halloween Helper" title="Click to open; drag to move">🎃</button><div data-panel hidden><header><strong>Halloween Helper</strong><button type="button" data-close aria-label="Close">×</button></header><p data-status role="status"></p><div data-summary></div><div data-goal></div><div data-actions></div><details><summary>Recent treat receipts</summary><ol data-receipts></ol></details><details><summary>Halloween targets</summary><div data-targets></div></details><details><summary>Settings</summary><p>Full Access Torn API key for receipt history. Stored only in Tampermonkey; sent only to api.torn.com.</p><input data-key type="password" autocomplete="off" placeholder="Torn API key" aria-label="Torn API key"><div data-settings></div></details></div>';
+  root.innerHTML = '<button type="button" data-pumpkin aria-label="Halloween Helper" title="Click to open; drag to move">🎃</button><div data-panel hidden><header><strong>Halloween Helper</strong><button type="button" data-close aria-label="Close">×</button></header><p data-status role="status"></p><div data-summary></div><div data-goal></div><div data-actions></div><details><summary>Recent treat receipts</summary><ol data-receipts></ol></details><details><summary>Halloween targets</summary><div data-targets></div></details><details><summary>Settings</summary><p>Full Access Torn API key for receipt history. Stored on this device; sent only to api.torn.com.</p><input data-key type="password" autocomplete="off" placeholder="Torn API key" aria-label="Torn API key"><div data-settings></div></details></div>';
   const style = el('style', `#${ID}{position:fixed;z-index:2147483646;font:13px/1.45 Arial,sans-serif;color:#eee}#${ID} *{box-sizing:border-box}#${ID} button,.hh-pin{cursor:pointer;border:1px solid #986131;border-radius:5px;background:#34302c;color:#fff;padding:6px 9px}#${ID} [data-pumpkin]{width:42px;height:42px;font-size:25px;touch-action:none;padding:0;border-radius:50%;background:#292521;box-shadow:0 2px 8px #0007}#${ID} [data-panel]{position:fixed;width:330px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:14px;border:1px solid #c17a35;border-radius:9px;background:#242526;box-shadow:0 5px 24px #0009}#${ID} [hidden]{display:none!important}#${ID} header{display:flex;justify-content:space-between;align-items:center;color:#ffb65e;font-size:16px}#${ID} p{margin:8px 0}#${ID} details{margin-top:12px;border-top:1px solid #555;padding-top:8px}#${ID} summary{cursor:pointer}#${ID} input{width:100%;padding:7px;background:#171819;color:white;border:1px solid #777}#${ID} [data-actions],#${ID} [data-settings]{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}#${ID} [data-summary]{font-size:20px;color:#ffb65e}#${ID} [data-goal]{margin-top:9px}#${ID} li{margin:5px 0}#${ID} a{color:#ffbf75}#${ID} [data-targets]>div{display:flex;gap:5px;align-items:center;margin-top:5px}#${ID} [data-targets] a{flex:1}.hh-pin{font:11px Arial,sans-serif;margin:2px}.hh-basket-pins{padding:8px;border:1px solid #986131;background:#282623;color:white}.hh-sidebar{display:block;width:100%;padding:5px 3px;text-align:left;font:11px/1.4 Arial,sans-serif;color:#ffb65e;background:transparent;border:0;cursor:pointer}`);
   document.head.append(style); document.body.append(root);
   const $ = selector => root.querySelector(selector);
@@ -249,16 +289,16 @@
       // Check log access before retaining the credential.
       await request('https://api.torn.com/v2/user/log?log=2536&limit=1', key);
       account = { id: result.profile.id, name: result.profile.name };
-      GM_setValue('hh-key', key); GM_setValue('hh-account', account); $('[data-key]').value = '';
+      await setValue('hh-key', key); await setValue('hh-account', account); $('[data-key]').value = '';
       await update(d => d); setPosition(load().position); render(); message('Connected as ' + account.name + '. Syncing event history…');
     } finally { busy = false; }
     await sync();
   }
-  $('[data-settings]').append(button('Save key', connect), button('Forget key', () => { GM_deleteValue('hh-key'); message('API key removed. Your saved targets and receipts remain on this device.'); }), button('Reset pumpkin position', async () => { await update(d => ({ ...d, position: null })); setPosition(null); }));
+  $('[data-settings]').append(button('Save key', connect), button('Forget key', async () => { await deleteValue('hh-key'); message('API key removed. Your saved targets and receipts remain on this device.'); }), button('Reset pumpkin position', async () => { await update(d => ({ ...d, position: null })); setPosition(null); }));
 
   async function sync() {
     if (busy) return;
-    if (!account || !GM_getValue('hh-key', '')) throw new Error('Save your Torn API key in Settings.');
+    if (!account || !getValue('hh-key', '')) throw new Error('Save your Torn API key in Settings.');
     busy = true;
     try {
       await locked('sync-' + account.id, async () => {
@@ -267,19 +307,19 @@
         let data = load();
         if (!data.job && Date.now() - (data.syncAttempt || 0) < 25000) { message('History was checked recently. Try again in a moment.'); return; }
         await update(d => ({ ...d, syncAttempt: Date.now() }));
-        let category = GM_getValue('hh-category', null);
+        let category = getValue('hh-category', null);
         if (!category) {
           const result = await api('torn/logcategories');
           const match = result.logcategories?.find(c => /halloween.*basket/i.test(c.title));
           if (!match) throw new Error('Torn did not return the Halloween basket log category.');
-          category = match.id; GM_setValue('hh-category', category);
+          category = match.id; await setValue('hh-category', category);
         }
         const end = Math.floor(Date.now() / 1000), from = Math.max(yearStart(data.year), (data.lastSync || 0) - 300);
         let job = data.job || { from, end, url: `https://api.torn.com/v2/user/log?cat=${category}&limit=100&from=${from}&to=${end}` };
         // Bounded, resumable batches avoid a burst of requests for a large history.
         for (let page = 0; page < 5; page++) {
           message(`Syncing Halloween receipts — page ${page + 1}…`);
-          const result = await request(job.url, GM_getValue('hh-key', ''));
+          const result = await request(job.url, getValue('hh-key', ''));
           if (!Array.isArray(result.log)) throw new Error('Unrecognized log response. Your saved total was not cleared.');
           const logs = result.log;
           const oldest = logs.length ? Math.min(...logs.map(l => l.timestamp)) : 0;
@@ -458,7 +498,8 @@
     });
     if (notice) {
       message(`${notice}: you have enough treats. Check ownership and any special requirements in your basket.`);
-      GM_notification({ title: 'Halloween upgrade ready', text: `${notice}: enough treats and its tier is unlocked. Check your basket before purchasing.`, timeout: 12000, tag: ID + '-upgrade' });
+      if (isPDA || typeof GM_notification !== 'function') setPanelOpen(true);
+      else GM_notification({ title: 'Halloween upgrade ready', text: `${notice}: enough treats and its tier is unlocked. Check your basket before purchasing.`, timeout: 12000, tag: ID + '-upgrade' });
     }
   }
   setPosition(load()?.position); render();
@@ -491,7 +532,7 @@
   function autoSyncIfDue() {
     if (!active()) return;
     const data = load();
-    if (data && GM_getValue('hh-key', '') && !busy && Date.now() - (data.syncAttempt || 0) > 60000) void sync().catch(showError);
+    if (data && getValue('hh-key', '') && !busy && Date.now() - (data.syncAttempt || 0) > 60000) void sync().catch(showError);
   }
   window.addEventListener('focus', () => { void inspectPage().catch(showError); render(); autoSyncIfDue(); });
   document.addEventListener('visibilitychange', autoSyncIfDue);
@@ -502,4 +543,10 @@
   }, 10000);
   void inspectPage().catch(showError);
   autoSyncIfDue();
-})();
+})().catch(() => {
+  if (typeof document === 'undefined') return;
+  const warning = document.createElement('div');
+  warning.textContent = 'Halloween Helper could not start. Check script storage permissions and use END injection in Torn PDA.';
+  warning.style.cssText = 'position:fixed;bottom:10px;left:10px;right:10px;z-index:2147483647;background:#292521;color:#ffbf75;padding:12px';
+  (document.body || document.documentElement).append(warning);
+});
