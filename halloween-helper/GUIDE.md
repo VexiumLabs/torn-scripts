@@ -36,6 +36,8 @@ Next target uses a one-use, destination-specific session marker to reopen the pa
 
 ### Torn PDA
 
+The sidebar treat total uses the compact `🎃 123` format on PDA. Desktop retains `🎃 123 earned`. Pinned upgrade progress still follows the total on both platforms.
+
 Install the same `.user.js` file in PDA with **END** injection. Enter a Full Access key in the helper's Settings; it does not automatically use PDA's configured key, which may lack log access. Desktop and phone settings and lists are separate.
 
 On current PDA versions, the helper uses `PDA_storage` for durable script storage and `PDA_httpGet` for API requests. On older versions without native storage it uses a script-prefixed browser store; clearing browser data can erase that fallback store. Storage write failures are reported instead of silently treating a target as saved.

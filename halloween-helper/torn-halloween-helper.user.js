@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Halloween Helper
 // @namespace    https://github.com/vexiumlabs/torn-scripts
-// @version      1.1.1
+// @version      1.1.2
 // @description  Yearly treat receipts, pinned basket upgrades, and a movable Halloween target list.
 // @author       DarrylPhilbin
 // @license      GPL-3.0-only
@@ -250,7 +250,7 @@
     const status = pinStatus(data?.pin, data?.basket, Date.now());
     $('[data-goal]').textContent = status;
     pumpkin.title = `${status}\nClick for controls; drag to move`;
-    if (sidebar) sidebar.textContent = `🎃 ${total.toLocaleString()} earned${data?.pin ? ' · ' + status : ''}`;
+    if (sidebar) sidebar.textContent = `${isPDA ? '🎃 ' + total.toLocaleString() : '🎃 ' + total.toLocaleString() + ' earned'}${data?.pin ? ' · ' + status : ''}`;
     if (profileButton) {
       const saved = data?.targets?.some(t => t.id === pageProfileID());
       profileButton.dataset.saved = String(!!saved);
