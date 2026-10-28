@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Halloween Helper
 // @namespace    https://github.com/vexiumlabs/torn-scripts
-// @version      1.1.0
+// @version      1.1.1
 // @description  Yearly treat receipts, pinned basket upgrades, and a movable Halloween target list.
 // @author       DarrylPhilbin
 // @license      GPL-3.0-only
@@ -208,14 +208,15 @@
   document.head.append(style); document.body.append(root);
   const $ = selector => root.querySelector(selector);
   const popup = $('[data-panel]'), pumpkin = $('[data-pumpkin]');
-  // Keep each tab's panel state through full-page target navigation.
+  // Only explicit target navigation carries the panel to the next page.
   function setPanelOpen(open) {
     popup.hidden = !open;
-    try { sessionStorage.setItem(ID + '-panel-open', String(open)); } catch (_) { /* Storage may be disabled. */ }
+    if (!open) { try { sessionStorage.removeItem(ID + '-next-panel'); } catch (_) {} }
     if (open) placePopup();
   }
   function message(text) { $('[data-status]').textContent = text; }
-  function showError(error) { message(error.message || 'Something went wrong.'); setPanelOpen(true); }
+  function reportError(error) { message(error.message || 'Something went wrong.'); }
+  function showError(error) { reportError(error); setPanelOpen(true); }
   function placePopup() {
     const r = pumpkin.getBoundingClientRect();
     popup.style.left = Math.max(8, Math.min(r.left, innerWidth - popup.offsetWidth - 8)) + 'px';
@@ -355,7 +356,10 @@
         return { ...data, cursor: next.cursor };
       });
       message('Opening ' + target.name + '…');
-      if (active()) location.assign('https://www.torn.com/profiles.php?XID=' + target.id);
+      if (active()) {
+        try { sessionStorage.setItem(ID + '-next-panel', JSON.stringify({ id: target.id, until: Date.now() + 60000 })); } catch (_) {}
+        location.assign('https://www.torn.com/profiles.php?XID=' + target.id);
+      }
     } finally { navigatingTarget = false; }
   }
   $('[data-actions]').append(button('Next target →', nextTarget), button('Sync receipts', sync), button('Unpin upgrade', async () => { await update(d => ({ ...d, pin: null, notified: null })); render(); }));
@@ -503,8 +507,13 @@
     }
   }
   setPosition(load()?.position); render();
-  try { if (sessionStorage.getItem(ID + '-panel-open') === 'true') setPanelOpen(true); } catch (_) { /* Use the default closed state. */ }
-  if (!account) { popup.hidden = false; message('Welcome! Add your Torn API key in Settings to get started.'); root.querySelector('details:last-child').open = true; placePopup(); }
+  try {
+    sessionStorage.removeItem(ID + '-panel-open'); // Retire the old persistent flag.
+    const next = JSON.parse(sessionStorage.getItem(ID + '-next-panel') || 'null');
+    sessionStorage.removeItem(ID + '-next-panel');
+    if (next && next.until > Date.now() && next.id === pageProfileID()) setPanelOpen(true);
+  } catch (_) { /* Use the default closed state. */ }
+  if (!account) { message('Welcome! Add your Torn API key in Settings to get started.'); root.querySelector('details:last-child').open = true; }
   // Torn renders Actions asynchronously. Retry after page changes instead of
   // waiting for the periodic refresh; ignore our own renders to avoid a loop.
   let pageScanTimer = null;
@@ -514,7 +523,7 @@
       pageScanTimer = null;
       if (!active()) return;
       if (scanning) { schedulePageScan(); return; }
-      void inspectPage().catch(showError);
+      void inspectPage().catch(reportError);
     }, Math.max(50, 1500 - (Date.now() - lastScan) + 10));
   }
   const helperSelector = '#'+ID+',.hh-sidebar,.hh-profile-target,.hh-profile-slot,.hh-upgrade-pin';
@@ -528,20 +537,20 @@
   }).observe(document.body, { childList: true, subtree: true });
   document.addEventListener('visibilitychange', schedulePageScan);
   // No hidden-page DOM reads. Only inspect the page while it is actively viewed.
-  ['click', 'keyup', 'scroll'].forEach(name => document.addEventListener(name, () => { if (active()) void inspectPage().catch(showError); }, { passive: true }));
+  ['click', 'keyup', 'scroll'].forEach(name => document.addEventListener(name, () => { if (active()) void inspectPage().catch(reportError); }, { passive: true }));
   function autoSyncIfDue() {
     if (!active()) return;
     const data = load();
-    if (data && getValue('hh-key', '') && !busy && Date.now() - (data.syncAttempt || 0) > 60000) void sync().catch(showError);
+    if (data && getValue('hh-key', '') && !busy && Date.now() - (data.syncAttempt || 0) > 60000) void sync().catch(reportError);
   }
-  window.addEventListener('focus', () => { void inspectPage().catch(showError); render(); autoSyncIfDue(); });
+  window.addEventListener('focus', () => { void inspectPage().catch(reportError); render(); autoSyncIfDue(); });
   document.addEventListener('visibilitychange', autoSyncIfDue);
   setInterval(() => {
     if (!active()) return;
-    render(); void inspectPage().catch(showError);
+    render(); void inspectPage().catch(reportError);
     autoSyncIfDue();
   }, 10000);
-  void inspectPage().catch(showError);
+  void inspectPage().catch(reportError);
   autoSyncIfDue();
 })().catch(() => {
   if (typeof document === 'undefined') return;

@@ -22,7 +22,7 @@ The alert means **enough treats and the tier is unlocked**. It does not certify 
 
 The profile pumpkin adds or removes the player from your Halloween list. It appears in the profile Actions grid beside the native target control and matches its dimensions. A highlighted pumpkin with a checkmark means the player is saved; clicking it again removes them. The button is disabled while a save is pending to prevent repeated clicks. Your normal Torn target list is not modified.
 
-**Next target** opens one saved profile per click, in list order, and wraps back to the beginning after the last target. Your position is saved across page changes. The panel also stays open in the current tab when you use Next target, so you can keep cycling. Closing it with the pumpkin, ×, Escape, or an outside click keeps it closed on the next page. Cycling uses no API calls and does not wait for receipt syncing.
+**Next target** opens one saved profile per click, in list order, and wraps back to the beginning after the last target. Your position is saved across page changes. The panel also stays open in the current tab when you use Next target, so you can keep cycling. Ordinary navigation and reloads start with the panel closed; only Next target reopens it on the destination profile. Cycling uses no API calls and does not wait for receipt syncing.
 
 All saved targets are included, regardless of status or faction. Check the profile yourself to decide whether you can attack. The helper only opens the profile; you open the attack page and perform the attack yourself.
 
@@ -32,7 +32,7 @@ Adding a target reads their name from the open profile's page title and their ID
 
 Tampermonkey stores the API key, account identity, current-year receipts, target names and IDs, cursor, pin, recorded basket balance, and pumpkin position locally. No third-party server receives them. No key is embedded in the script, query string, or console output. **Forget key** removes the stored credential while preserving your local lists and receipts.
 
-The open/closed panel state uses the current tab's session storage. Target operations use local data, but initial account setup and receipt syncing require your API key.
+Next target uses a one-use, destination-specific session marker to reopen the panel. Setup prompts and background sync errors do not automatically open it. Target operations use local data, but initial account setup and receipt syncing require your API key.
 
 ### Torn PDA
 
