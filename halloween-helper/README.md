@@ -2,7 +2,7 @@
 
 One Halloween userscript for treat receipts, upgrade goals, and your own target rotation.
 
-**Author:** DarrylPhilbin · **Version:** 1.1.2 · **License:** GPL-3.0-only
+**Author:** DarrylPhilbin · **Version:** 1.1.3 · **License:** GPL-3.0-only
 
 ## Features
 
@@ -11,6 +11,7 @@ One Halloween userscript for treat receipts, upgrade goals, and your own target 
 - **Pinned upgrade:** open your basket and use the small pin beside an upgrade. The sidebar and pumpkin show your selected upgrade and how many treats remain. An alert tells you when the recorded balance covers its cost and its tier is unlocked.
 - **Halloween targets:** use the pumpkin in a player's Actions grid to add or remove them from a separate list. A checkmark shows saved players. Choose **Next target** to cycle through every saved profile in order. Adding, removing, and cycling targets use no API calls; player availability is not checked.
 - **Movable controls:** drag the floating pumpkin wherever you prefer. Its position is saved across pages, and the panel stays open in the current tab while cycling targets.
+- **Off-season toggle:** disable **Live treat counter and automatic sync** in Settings to hide the sidebar counter and pause automatic receipt syncing and upgrade alerts. Target saving and cycling still work year-round.
 
 ## Installation
 
@@ -21,6 +22,10 @@ One Halloween userscript for treat receipts, upgrade goals, and your own target 
 5. Visit player profiles and use the profile pumpkin to build your Halloween target list.
 
 The script never attacks, purchases upgrades, exchanges treats, or automatically refreshes Torn pages. Target navigation happens only when you press **Next target**.
+
+## Updates
+
+The script declares GitHub update and download URLs for Torn PDA and Tampermonkey. Existing installations need version 1.1.3 or later installed once to pick up these headers. After that, use your userscript manager's update controls instead of copying code. In PDA, check for updates in Userscripts and apply the available update. Update the existing entry rather than deleting and reinstalling it, to preserve its native storage. Update timing and installation are controlled by the manager; the script does not silently replace itself.
 
 See the [guide](GUIDE.md) for target cycling, upgrade estimates, storage, and troubleshooting. Automated logic tests and a local browser fixture cover the main behaviors; Torn markup and API log formats may change.
 

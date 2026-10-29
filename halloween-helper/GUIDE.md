@@ -2,6 +2,8 @@
 
 ## Treat receipts
 
+In the pumpkin's **Settings**, turn off **Live treat counter and automatic sync** to hide the sidebar counter and pause automatic receipt syncing and upgrade alerts. The choice is saved on your device and defaults to on. Your saved receipts, pin, and targets are retained; adding/removing targets, Next target, and manual **Sync receipts** remain available. An already-running sync may finish. Turn it back on to show the counter and resume overdue syncing. This applies to both desktop and PDA.
+
 The helper uses Torn's documented v2 log API and discovers the Halloween basket category from Torn's log-category list. Each recognized receipt is saved under its unique log ID. This prevents overlap between paginated or repeated requests from increasing the total twice.
 
 The displayed total is earned treats for the current UTC calendar year, not your spendable basket balance or lifetime basket progress. Purchases and exchanges do not reduce it. Recognized incoming treat logs are included; new or unrecognized log formats are flagged rather than guessed. The most recent 20 receipts are shown, with all recognized receipts retained for the current year.
@@ -39,6 +41,8 @@ Next target uses a one-use, destination-specific session marker to reopen the pa
 The sidebar treat total uses the compact `🎃 123` format on PDA. Desktop retains `🎃 123 earned`. Pinned upgrade progress still follows the total on both platforms.
 
 Install the same `.user.js` file in PDA with **END** injection. Enter a Full Access key in the helper's Settings; it does not automatically use PDA's configured key, which may lack log access. Desktop and phone settings and lists are separate.
+
+Version 1.1.3 adds `@updateURL` and `@downloadURL` pointing to the script on GitHub. Install this version once into your existing PDA script entry, then use PDA's Userscripts update controls for future releases. PDA compares the published version against your installed version. Apply updates in place to retain script storage; you do not need to copy each future release manually. The app controls when checks occur and whether user confirmation is needed.
 
 On current PDA versions, the helper uses `PDA_storage` for durable script storage and `PDA_httpGet` for API requests. On older versions without native storage it uses a script-prefixed browser store; clearing browser data can erase that fallback store. Storage write failures are reported instead of silently treating a target as saved.
 

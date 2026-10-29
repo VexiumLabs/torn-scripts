@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Torn Halloween Helper
 // @namespace    https://github.com/vexiumlabs/torn-scripts
-// @version      1.1.2
+// @version      1.1.3
+// @updateURL    https://raw.githubusercontent.com/VexiumLabs/torn-scripts/main/halloween-helper/torn-halloween-helper.user.js
+// @downloadURL  https://raw.githubusercontent.com/VexiumLabs/torn-scripts/main/halloween-helper/torn-halloween-helper.user.js
 // @description  Yearly treat receipts, pinned basket upgrades, and a movable Halloween target list.
 // @author       DarrylPhilbin
 // @license      GPL-3.0-only
@@ -243,6 +245,22 @@
   window.addEventListener('resize', () => setPosition({ x: parseFloat(root.style.left), y: parseFloat(root.style.top) }));
 
   let sidebar = null;
+  const liveCounterEnabled = () => getValue('hh-live-counter', true) !== false;
+  const liveCounterToggle = el('input', '', { type: 'checkbox', checked: liveCounterEnabled() });
+  liveCounterToggle.style.width = 'auto';
+  const liveCounterLabel = el('label', '');
+  liveCounterLabel.append(liveCounterToggle, document.createTextNode(' Live treat counter and automatic sync'));
+  $('[data-settings]').before(liveCounterLabel);
+  style.textContent += '.hh-sidebar[hidden]{display:none!important}';
+  liveCounterToggle.onchange = async () => {
+    liveCounterToggle.disabled = true;
+    try {
+      await setValue('hh-live-counter', liveCounterToggle.checked);
+      render();
+      if (liveCounterEnabled()) autoSyncIfDue();
+    } catch (error) { render(); showError(error); }
+    finally { liveCounterToggle.disabled = false; }
+  };
   function render() {
     const data = load();
     const total = Object.values(data?.receipts || {}).reduce((sum, r) => sum + r.amount, 0);
@@ -251,6 +269,8 @@
     $('[data-goal]').textContent = status;
     pumpkin.title = `${status}\nClick for controls; drag to move`;
     if (sidebar) sidebar.textContent = `${isPDA ? '🎃 ' + total.toLocaleString() : '🎃 ' + total.toLocaleString() + ' earned'}${data?.pin ? ' · ' + status : ''}`;
+    if (sidebar) sidebar.hidden = !liveCounterEnabled();
+    liveCounterToggle.checked = liveCounterEnabled();
     if (profileButton) {
       const saved = data?.targets?.some(t => t.id === pageProfileID());
       profileButton.dataset.saved = String(!!saved);
@@ -494,7 +514,7 @@
     } finally { scanning = false; }
   }
   async function notifyUpgrade() {
-    if (!account) return;
+    if (!account || !liveCounterEnabled()) return;
     let notice = null;
     await update(d => {
       if (!d.pin || !d.basket || d.job || Date.now() - (d.basket.checked || d.basket.at) > 120000 || d.basket.tier < d.pin.tier || d.basket.balance < d.pin.cost || d.notified === d.pin.name) return d;
@@ -539,7 +559,7 @@
   // No hidden-page DOM reads. Only inspect the page while it is actively viewed.
   ['click', 'keyup', 'scroll'].forEach(name => document.addEventListener(name, () => { if (active()) void inspectPage().catch(reportError); }, { passive: true }));
   function autoSyncIfDue() {
-    if (!active()) return;
+    if (!active() || !liveCounterEnabled()) return;
     const data = load();
     if (data && getValue('hh-key', '') && !busy && Date.now() - (data.syncAttempt || 0) > 60000) void sync().catch(reportError);
   }
