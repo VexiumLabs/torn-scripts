@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Halloween Helper
 // @namespace    https://github.com/vexiumlabs/torn-scripts
-// @version      1.1.3
+// @version      1.1.4
 // @updateURL    https://raw.githubusercontent.com/VexiumLabs/torn-scripts/main/halloween-helper/torn-halloween-helper.user.js
 // @downloadURL  https://raw.githubusercontent.com/VexiumLabs/torn-scripts/main/halloween-helper/torn-halloween-helper.user.js
 // @description  Yearly treat receipts, pinned basket upgrades, and a movable Halloween target list.
