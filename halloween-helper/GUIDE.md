@@ -6,6 +6,8 @@ The floating pumpkin and sidebar counter appear from October 23 until November 3
 
 ## Treat receipts
 
+The sidebar counter sits beneath the chain link during both active chains and decay. It reattaches when Torn replaces the chain display, rather than falling back to the top of the sidebar.
+
 In the pumpkin's **Settings**, turn off **Live treat counter and automatic sync** to hide the sidebar counter and pause automatic receipt syncing and upgrade alerts. The choice is saved on your device and defaults to on. Your saved receipts, pin, and targets are retained; adding/removing targets, Next target, and manual **Sync receipts** remain available. An already-running sync may finish. Turn it back on to show the counter and resume overdue syncing. This applies to both desktop and PDA.
 
 The helper uses Torn's documented v2 log API and discovers the Halloween basket category from Torn's log-category list. Each recognized receipt is saved under its unique log ID. This prevents overlap between paginated or repeated requests from increasing the total twice.

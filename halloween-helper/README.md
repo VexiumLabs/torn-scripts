@@ -2,7 +2,7 @@
 
 One Halloween userscript for treat receipts, upgrade goals, and your own target rotation.
 
-**Author:** DarrylPhilbin · **Version:** 1.2.0 · **License:** GPL-3.0-only
+**Author:** DarrylPhilbin · **Version:** 1.2.1 · **License:** GPL-3.0-only
 
 ## Seasonal visibility
 

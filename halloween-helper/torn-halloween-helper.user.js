@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Halloween Helper
 // @namespace    https://github.com/vexiumlabs/torn-scripts
-// @version      1.2.0
+// @version      1.2.1
 // @updateURL    https://raw.githubusercontent.com/VexiumLabs/torn-scripts/main/halloween-helper/torn-halloween-helper.user.js
 // @downloadURL  https://raw.githubusercontent.com/VexiumLabs/torn-scripts/main/halloween-helper/torn-halloween-helper.user.js
 // @description  Yearly treat receipts, pinned basket upgrades, and a movable Halloween target list.
@@ -501,13 +501,16 @@
       const ownLink = document.querySelector('#sidebar a[href*="profiles.php?XID="], #sidebarroot a[href*="profiles.php?XID="]');
       const viewedAccount = ownLink ? Number(new URL(ownLink.href).searchParams.get('XID')) : null;
       if (account && viewedAccount && viewedAccount !== account.id) { message('This page belongs to a different account than your saved API key. Page integration is paused.'); return; }
-      if (!sidebar?.isConnected) {
-        const anchor = document.querySelector('#sidebar [href*="/war/chain"], #sidebarroot [href*="/war/chain"]');
-        const host = document.querySelector('#sidebar, #sidebarroot');
-        if (host) {
+      {
+        const host = document.querySelector('#sidebar') || document.querySelector('#sidebarroot');
+        const anchor = host?.querySelector('a[href*="/war/chain"], a[href*="step=chainreport"]');
+        if (host && !sidebar?.isConnected) {
           sidebar = button('🎃 Halloween Helper', () => { render(); setPanelOpen(true); }); sidebar.className = 'hh-sidebar';
-          if (anchor) anchor.insertAdjacentElement('afterend', sidebar); else host.prepend(sidebar);
         }
+        // The chain link changes during decay and may be replaced by React.
+        // Recheck placement even when our counter is still connected.
+        if (anchor && anchor.nextElementSibling !== sidebar) anchor.after(sidebar);
+        else if (host && sidebar && !sidebar.isConnected) host.append(sidebar);
       }
       const id = pageProfileID();
       if (id) mountProfileButton();
