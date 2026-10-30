@@ -1,5 +1,9 @@
 # Halloween Helper guide
 
+## Seasonal visibility
+
+The floating pumpkin and sidebar counter appear from October 23 until November 3 at your configured event start time: 48 hours before October 25 and 48 hours after November 1. Set your personal event start time in Settings using 24-hour Torn time (UTC), with minutes limited to 00, 15, 30, or 45; the default is 00:00. No calendar API requests are added. Outside this window, automatic receipt syncing and upgrade alerts pause. Profile add/remove target buttons remain available year-round, and saved targets are retained. A manually disabled counter stays disabled when the season returns.
+
 ## Treat receipts
 
 In the pumpkin's **Settings**, turn off **Live treat counter and automatic sync** to hide the sidebar counter and pause automatic receipt syncing and upgrade alerts. The choice is saved on your device and defaults to on. Your saved receipts, pin, and targets are retained; adding/removing targets, Next target, and manual **Sync receipts** remain available. An already-running sync may finish. Turn it back on to show the counter and resume overdue syncing. This applies to both desktop and PDA.

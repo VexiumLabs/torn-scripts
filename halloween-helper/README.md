@@ -2,7 +2,11 @@
 
 One Halloween userscript for treat receipts, upgrade goals, and your own target rotation.
 
-**Author:** DarrylPhilbin · **Version:** 1.1.3 · **License:** GPL-3.0-only
+**Author:** DarrylPhilbin · **Version:** 1.2.0 · **License:** GPL-3.0-only
+
+## Seasonal visibility
+
+The floating pumpkin and sidebar counter appear from October 23 until November 3 at your configured event start time: 48 hours before October 25 and 48 hours after November 1. Set your personal event start time in Settings using 24-hour Torn time (UTC), with minutes limited to 00, 15, 30, or 45; the default is 00:00. No calendar API requests are added. Outside this window, automatic receipt syncing and upgrade alerts pause. Profile add/remove target buttons remain available year-round, and saved targets are retained. A manually disabled counter stays disabled when the season returns.
 
 ## Features
 

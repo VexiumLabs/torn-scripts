@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Halloween Helper
 // @namespace    https://github.com/vexiumlabs/torn-scripts
-// @version      1.1.4
+// @version      1.2.0
 // @updateURL    https://raw.githubusercontent.com/VexiumLabs/torn-scripts/main/halloween-helper/torn-halloween-helper.user.js
 // @downloadURL  https://raw.githubusercontent.com/VexiumLabs/torn-scripts/main/halloween-helper/torn-halloween-helper.user.js
 // @description  Yearly treat receipts, pinned basket upgrades, and a movable Halloween target list.
@@ -38,6 +38,13 @@
   const norm = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const yearOf = ms => new Date(ms).getUTCFullYear();
   const yearStart = year => Date.UTC(year, 0, 1) / 1000;
+  function halloweenVisible(now, eventTime = '00:00') {
+    const match = /^(\d{2}):(\d{2})$/.exec(eventTime);
+    const hour = match && Number(match[1]) < 24 ? Number(match[1]) : 0;
+    const minute = match && Number(match[2]) < 60 ? Number(match[2]) : 0;
+    const year = yearOf(now);
+    return now >= Date.UTC(year, 9, 23, hour, minute) && now < Date.UTC(year, 10, 3, hour, minute);
+  }
   const number = value => /^\d[\d,]*$/.test(String(value)) ? Number(String(value).replace(/,/g, '')) : null;
   function freshYear(data, now) {
     const year = yearOf(now);
@@ -118,7 +125,7 @@
     return candidates[0]?.href || null;
   }
   if (typeof module === 'object' && module.exports) {
-    module.exports = { freshYear, receipt, mergeLogs, adjustBasket, nextSavedTarget, basketTier, pinStatus, olderPage, UPGRADES };
+    module.exports = { halloweenVisible, freshYear, receipt, mergeLogs, adjustBasket, nextSavedTarget, basketTier, pinStatus, olderPage, UPGRADES };
     return;
   }
   if (!document.body || document.getElementById(ID)) return;
@@ -210,6 +217,7 @@
   document.head.append(style); document.body.append(root);
   const $ = selector => root.querySelector(selector);
   const popup = $('[data-panel]'), pumpkin = $('[data-pumpkin]');
+  popup.addEventListener('toggle', () => { if (!popup.hidden) placePopup(); }, true);
   // Only explicit target navigation carries the panel to the next page.
   function setPanelOpen(open) {
     popup.hidden = !open;
@@ -246,6 +254,26 @@
 
   let sidebar = null;
   const liveCounterEnabled = () => getValue('hh-live-counter', true) !== false;
+  const inSeason = () => halloweenVisible(Date.now(), getValue('hh-event-time', '00:00'));
+  let wasInSeason = inSeason();
+  const eventHour = el('select', '', { ariaLabel: 'Event start hour (24-hour UTC)' });
+  const eventMinute = el('select', '', { ariaLabel: 'Event start minute' });
+  for (let hour = 0; hour < 24; hour++) {
+    const value = String(hour).padStart(2, '0');
+    eventHour.append(el('option', value, { value }));
+  }
+  for (const value of ['00', '15', '30', '45']) eventMinute.append(el('option', value, { value }));
+  const [savedHour, savedMinute] = getValue('hh-event-time', '00:00').split(':');
+  eventHour.value = savedHour;
+  eventMinute.value = ['00', '15', '30', '45'].includes(savedMinute) ? savedMinute : '00';
+  const eventTimeLabel = el('div', 'Your Halloween event start time (24-hour Torn time / UTC) ');
+  eventTimeLabel.append(eventHour, document.createTextNode(' : '), eventMinute);
+  style.textContent += `#${ID} select{padding:5px;border:1px solid #777;border-radius:4px;background:#171819;color:#fff;font:inherit}`;
+  $('[data-settings]').before(eventTimeLabel);
+  eventHour.onchange = eventMinute.onchange = async () => {
+    try { await setValue('hh-event-time', eventHour.value + ':' + eventMinute.value); render(); }
+    catch (error) { showError(error); }
+  };
   const liveCounterToggle = el('input', '', { type: 'checkbox', checked: liveCounterEnabled() });
   liveCounterToggle.style.width = 'auto';
   const liveCounterLabel = el('label', '');
@@ -262,6 +290,10 @@
     finally { liveCounterToggle.disabled = false; }
   };
   function render() {
+    const seasonal = inSeason();
+    pumpkin.hidden = !seasonal;
+    if (wasInSeason && !seasonal) setPanelOpen(false);
+    wasInSeason = seasonal;
     const data = load();
     const total = Object.values(data?.receipts || {}).reduce((sum, r) => sum + r.amount, 0);
     $('[data-summary]').textContent = data ? `${total.toLocaleString()} treats · ${data.year}` : 'Connect your Torn account';
@@ -269,7 +301,7 @@
     $('[data-goal]').textContent = status;
     pumpkin.title = `${status}\nClick for controls; drag to move`;
     if (sidebar) sidebar.textContent = `${isPDA ? '🎃 ' + total.toLocaleString() : '🎃 ' + total.toLocaleString() + ' earned'}${data?.pin ? ' · ' + status : ''}`;
-    if (sidebar) sidebar.hidden = !liveCounterEnabled();
+    if (sidebar) sidebar.hidden = !seasonal || !liveCounterEnabled();
     liveCounterToggle.checked = liveCounterEnabled();
     if (profileButton) {
       const saved = data?.targets?.some(t => t.id === pageProfileID());
@@ -514,7 +546,7 @@
     } finally { scanning = false; }
   }
   async function notifyUpgrade() {
-    if (!account || !liveCounterEnabled()) return;
+    if (!account || !liveCounterEnabled() || !inSeason()) return;
     let notice = null;
     await update(d => {
       if (!d.pin || !d.basket || d.job || Date.now() - (d.basket.checked || d.basket.at) > 120000 || d.basket.tier < d.pin.tier || d.basket.balance < d.pin.cost || d.notified === d.pin.name) return d;
@@ -531,7 +563,7 @@
     sessionStorage.removeItem(ID + '-panel-open'); // Retire the old persistent flag.
     const next = JSON.parse(sessionStorage.getItem(ID + '-next-panel') || 'null');
     sessionStorage.removeItem(ID + '-next-panel');
-    if (next && next.until > Date.now() && next.id === pageProfileID()) setPanelOpen(true);
+    if (inSeason() && next && next.until > Date.now() && next.id === pageProfileID()) setPanelOpen(true);
   } catch (_) { /* Use the default closed state. */ }
   if (!account) { message('Welcome! Add your Torn API key in Settings to get started.'); root.querySelector('details:last-child').open = true; }
   // Torn renders Actions asynchronously. Retry after page changes instead of
@@ -559,7 +591,7 @@
   // No hidden-page DOM reads. Only inspect the page while it is actively viewed.
   ['click', 'keyup', 'scroll'].forEach(name => document.addEventListener(name, () => { if (active()) void inspectPage().catch(reportError); }, { passive: true }));
   function autoSyncIfDue() {
-    if (!active() || !liveCounterEnabled()) return;
+    if (!active() || !liveCounterEnabled() || !inSeason()) return;
     const data = load();
     if (data && getValue('hh-key', '') && !busy && Date.now() - (data.syncAttempt || 0) > 60000) void sync().catch(reportError);
   }
